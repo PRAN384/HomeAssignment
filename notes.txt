@@ -27,3 +27,16 @@ in case even, we dont have a center Tile where robot can spawn
 ->Spawning/initialisation method for a robot on the simulation map, where to spawn? What are the assumptions?
 
 ->Need server heartbeat! so that the robots dont try 
+
+
+Assumptions:
+
+-> Robot name less than 10 Characters, will be saved in capitals
+
+
+
+Todo:
+
+-> Add exit simulation command and assign an input to it
+
+-> Using -1 as position about to be freed

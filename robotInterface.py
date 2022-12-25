@@ -1,32 +1,59 @@
 ''' Module that takes input from the user and feeds it to the robot controller'''
-
 import os
 import sys
 import numpy as np
 import paho.mqtt.client as mqtt
 import time
+import asyncio
+import threading
+from  libs.helpers import * 
 
-class mqtt_broker:
-    def __init__(self,b_address,instance_name,topic):
-        self.topic = topic
-        self.broker_address=b_address#"192.168.183.240"
-        #broker_address="iot.eclipse.org"
-        print("creating new instance")
-        self.client = mqtt.Client(instance_name) #create new instance
-        self.client.on_message=self.on_message #attach function to callback
-        print("connecting to broker")
-        self.client.connect(self.broker_address) #connect to broker    
 
-    def on_message(self,client, userdata, message):
-        pass
+def on_message(client, userdata, message):
+    resp= str(message.payload.decode("utf-8"))
+    # print(resp)
 
-    def publish_command(self,command):
-        if (time.time()-self.last_published > .01):
-            self.client.publish(self.topic,command)
-            self.last_published=time.time()
-            print("Command sent to cs")
-            
+server_broker =mqtt_broker(b_address="localhost",instance_name="Robot Server",topic_listen="robot/pos",topic_write="sitl/cmd")
+server_broker.client.on_message = on_message
+server_broker.client.subscribe(server_broker.topic_listen, qos=0)
+server_broker.client.loop_start()
 
-async take_input():
-    
-    
+
+
+def send_cmd(cmd):
+    server_broker.publish_command(cmd)
+
+
+def init_robot_instance():
+    ## Send init command
+    maxNameLen = 10
+    exitloop = False
+    while not exitloop :
+        robotName = str(input("Enter robot Name( <10 Characters )\n")).upper()
+        if len(robotName)<10:
+            cmd = "$INITROBOT,{},{}\r\n".format(robotName,time.time_ns())
+            send_cmd(cmd)
+            exitloop=True
+
+
+def input_navigation():
+
+
+    direction=input("Enter A command to move bot \n")
+    direction=str(direction).upper()
+    if direction in ['W','A','S','D']:        
+        navcmd = "$NAVREQ,{},{}".format(rid,direction)
+        send_cmd(navcmd)
+    else:
+        print("invalid input")
+
+
+init_robot_instance()
+
+while True:
+    time.sleep(1)
+#     input_navigation()
+
+
+## Front end 
+
