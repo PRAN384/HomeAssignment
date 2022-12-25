@@ -36,7 +36,7 @@ class robot():
 
 
 class sitl_map():
-    robotList = []
+    robotList = {}
     command_queue =[]
     emptyTiles =[]
     ids=[]
@@ -56,7 +56,9 @@ class sitl_map():
         cur_x,cur_y=obj.curLoc
         self.mapArray[tar_x,tar_y]=1
         self.mapArray[cur_x,cur_y]=1
-        self.robotList.append(obj)
+        self.robotList[id]=obj  ## Associating the robot with its id for easy access
+        
+        return True,obj.id
 
 
     def DeleteRobot(self,obj):
@@ -64,7 +66,7 @@ class sitl_map():
         cur_x,cur_y=obj.curLoc
         self.mapArray[tar_x,tar_y]=0
         self.mapArray[cur_x,cur_y]=0
-        self.robotList.pop(obj)
+        # self.robotList.pop(obj) Need to be tested
 
    
     def MoveRobot(self,obj):
@@ -76,7 +78,7 @@ class sitl_map():
             self.mapArray[tar_x,tar_y]=1
             self.mapArray[cur_x,cur_y]=-1
         else:
-            print()
+            print("Cant!")
             pass    
         ## Move and update empty tiles
 
