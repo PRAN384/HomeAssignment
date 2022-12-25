@@ -16,7 +16,18 @@ def on_message(client, userdata, message):
     # <1>: Robot ID
         rName = req.split(',')[1]
         initTime = req.split(',')[2]
-        MAP.AddRobot(robot(rName,initTime))
+        success,id= MAP.AddRobot(robot(rName,initTime))
+        if success:
+            print("Sending Init success")
+            client_broker.publish_command("$INITROBOTS,{},{}".format(rName,id))
+
+    if header =="$NAVREQ":
+        id      =    req.split(',')[1]
+        dir     =    req.split(',')[2]
+        cmdTime =    req.split(',')[3]
+        command = [id,dir,cmdTime]
+        MAP.command_queue.append(command)
+        
 
     print(MAP.mapArray)
 
@@ -25,13 +36,12 @@ client_broker = mqtt_broker(b_address="localhost",\
                             instance_name="SITL Server",\
                             topic_listen="sitl/cmd",\
                             topic_write="robot/pos")
+
 client_broker.client.on_message = on_message
 client_broker.client.subscribe(client_broker.topic_listen, qos=0)
 client_broker.client.loop_start()
 
 while True:
-    
-
 
     time.sleep(0.1)
     # client_broker.publish_command("yellow!")
