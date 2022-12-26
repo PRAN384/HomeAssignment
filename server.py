@@ -5,7 +5,7 @@ import paho.mqtt.client as mqtt
 from  libs.helpers import *
 
 
-MAP = sitl_map(10)
+MAP = sitl_map(5)
 
 def on_message(client, userdata, message):
     req= str(message.payload.decode("utf-8"))
@@ -27,22 +27,26 @@ def on_message(client, userdata, message):
         cmdTime =    req.split(',')[3]
         command = [id,dir,cmdTime]
         MAP.command_queue.append(command)
-        
-
-    print(MAP.mapArray)
-
+        # print(MAP.command_queue)
 
 client_broker = mqtt_broker(b_address="localhost",\
                             instance_name="SITL Server",\
                             topic_listen="sitl/cmd",\
                             topic_write="robot/pos")
-
 client_broker.client.on_message = on_message
 client_broker.client.subscribe(client_broker.topic_listen, qos=0)
 client_broker.client.loop_start()
 
-while True:
+t= 0
+dt = 0.01
 
-    time.sleep(0.1)
-    # client_broker.publish_command("yellow!")
-    # print(MAP.mapArray)
+def sendMap():
+    client_broker.publish_command("$NAVBROAD,{},{}".format(MAP.mapArray,time.time_ns))
+
+    pass
+
+while t>-1:
+    # print(MAP.mapArray)    
+    # MAP.cleanArray()
+    MAP.processQueue()
+    t+=dt
