@@ -104,7 +104,6 @@ class sitl_map():
         self.robotList[obj.id]=obj  ## Associating the robot with its id for easy access
         return True,obj.id
 
-
     def DeleteRobot(self,obj):
         tar_x,tar_y=obj.tarLoc
         cur_x,cur_y=obj.curLoc
@@ -123,7 +122,15 @@ class sitl_map():
             self.MoveRobot(bot)
             self.command_queue.pop(0) ## Danger
 
+    def getMap(self):
+        tmpMap = self.mapArray
+        return tmpMap
 
+    def setMap(self):
+        # tmpMap = 
+        pass
+
+        
     def MoveRobot(self,obj):
 
         tar_x,tar_y=obj.getTarLoc()
@@ -134,14 +141,14 @@ class sitl_map():
         if withinBoundary and not obj.getMoving():
             tileIsEmpty    = self.mapArray[tar_x,tar_y]==0
             if tileIsEmpty:
+                obj.setMoving(True)
                 self.mapArray[tar_x,tar_y]=obj.id
                 self.mapArray[cur_x,cur_y]=-obj.id
                 obj.setCurLoc([tar_x,tar_y])
-
+                
                 print(self.mapArray)
                 
-                self.Thread = threading.Thread(target =self.clearHold,\
-                                                    name = str(time.time_ns), args =(obj,))
+                self.Thread = threading.Timer(0.2,function=self.clearHold,args =(obj,))
                 self.Thread.start()
 
             else:
@@ -151,8 +158,6 @@ class sitl_map():
             print("On the edge")
 
     def getSpawnTilePos(self):
-        # returns spawn location of a new robot
-
         emptyTiles = np.argwhere(self.mapArray==0)
         i = randrange(len(emptyTiles))
         return list((emptyTiles[i]))
@@ -161,11 +166,7 @@ class sitl_map():
         self.mapArray[self.mapArray < 0] =0
 
     def clearHold(self,obj):
-        obj.setMoving(True)
-        time.sleep(2) ## Global variable or velocity associated to each robot
         self.mapArray[self.mapArray ==-obj.id]=0    
         obj.setMoving(False)
         print(self.mapArray)
-
         # Replace -ve nums with 0
-

@@ -3,6 +3,7 @@ import time
 import numpy as np
 import paho.mqtt.client as mqtt
 from  libs.helpers import *
+import json
 
 
 MAP = sitl_map(5)
@@ -41,12 +42,18 @@ t= 0
 dt = 0.01
 
 def sendMap():
-    client_broker.publish_command("$NAVBROAD,{},{}".format(MAP.mapArray,time.time_ns))
+    while True:
+        listMap = MAP.getMap().tolist()
+        encMap = json.dumps(listMap)
+        client_broker.publish_command("$NAVBROAD,:{}:{}".format(encMap,time.time_ns()))
+        time.sleep(1/60)
 
-    pass
+PosBroadCastThread= threading.Thread(target=sendMap,name="Position BroadCast",args=())
+PosBroadCastThread.start()
 
 while t>-1:
     # print(MAP.mapArray)    
     # MAP.cleanArray()
+    
     MAP.processQueue()
     t+=dt
