@@ -17,14 +17,44 @@ from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProper
 class MapView(GridLayout):
     rid=0
     robotName=""
-    init_map = False
+    initMap = False
+    lastHeard=0
+    timeoutPeriod = 5
     def __init__(self,srvr, **kwargs):
         super().__init__(**kwargs)
         self.attachServer(srvr)
         self.inputRobotName()
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
-        # Clock.schedule_interval(self.printMap,0.1)    
+        Clock.schedule_interval(self.checkServerActive,5)    
+
+
+    def pingServer(self):
+        ## Ping server when we get a message from the server,
+        # If the server doesnt get a reply from the Bot for 5 seconds
+        # it deletes the bot and assume it is dead 
+
+
+    def setLastHeard(self,num):
+        self.lastHeard = num
+
+    def getLastHeard(self):
+        return self.lastHeard
+
+    def checkServerActive(self,dt):
+        diff=time.time()-self.getLastHeard() 
+        print(diff)
+        if diff> self.timeoutPeriod:
+            print("Server is not active")
+            self.setRID(0)#Set the session ID to 0
+
+    def simStatus(self):
+        #Want to print 
+            #-number of bot in the sim,
+            #-ID 
+            #-Name
+            #-Location
+        pass
 
     def addPlt(self):
             self._added = True
@@ -71,9 +101,9 @@ class MapView(GridLayout):
         self.mapArray = arrayNew
 
     def setMap(self,mapAR):
-        if not self.init_map:
+        if not self.initMap:
             self.initMap(mapAR)
-            self.init_map=True
+            self.initMap=True
 
         old= np.array(self.getMap())
         isSame = (old==mapAR).all()
