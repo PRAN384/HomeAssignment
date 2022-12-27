@@ -46,7 +46,7 @@ def sendMap():
         listMap = MAP.getMap().tolist()
         encMap = json.dumps(listMap)
         client_broker.publish_command("$NAVBROAD,:{}:{}".format(encMap,time.time_ns()))
-        time.sleep(1/60)
+        time.sleep(0.1)
 
 PosBroadCastThread= threading.Thread(target=sendMap,name="Position BroadCast",args=())
 PosBroadCastThread.start()

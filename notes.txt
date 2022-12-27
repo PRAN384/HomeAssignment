@@ -38,5 +38,7 @@ Assumptions:
 Todo:
 
 -> Add exit simulation command and assign an input to it
+-> Routine in case the server closes
 
--> Using -1 as position about to be freed
+
+-> Using -id as position about to be freed

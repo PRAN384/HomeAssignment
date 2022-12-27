@@ -25,7 +25,7 @@ class mqtt_broker:
     def publish_command(self,command):
         self.client.publish(self.topic_write,command)
         self.last_published=time.time()
-        print("Command sent to cs")
+        # print("Command sent to cs")
 
 class robot():
     id =0
@@ -54,7 +54,7 @@ class robot():
     def calcTarget(self,navCmd):
         curpos = self.getCurLoc()
         tarpos=[0,0]
-        print("A :Cur:{} \n Tar:{}\n".format(self.getCurLoc(),self.getTarLoc()))
+        # print("A :Cur:{} \n Tar:{}\n".format(self.getCurLoc(),self.getTarLoc()))
 
         if navCmd =="W":
             tarpos[0] = curpos[0]-1
@@ -70,7 +70,6 @@ class robot():
             tarpos[0] = curpos[0]
 
         self.setTarLoc(tarpos)
-        print("Bs :Cur:{}\n Tar:{}\n".format(self.getCurLoc(),self.getTarLoc()))
 
     def setMoving(self,flag):
         self.isMoving = flag

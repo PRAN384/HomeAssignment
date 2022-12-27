@@ -1,5 +1,7 @@
+from kivy.uix.relativelayout import RelativeLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
+from kivy.lang import Builder
 from kivy.clock import Clock
 from kivy.app import App
 import numpy as np
@@ -7,17 +9,19 @@ import kivy
 from kivy.properties import ListProperty
 
 
-class MapView(GridLayout):
+class MapView(RelativeLayout):
     mapArray = []
-
     mapsize=10
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    __built = False
+    grid=[]
+    def __init__(self, *data, **kwargs):
 
-        self.cols= self.mapsize
-        for i in np.arange(0,self.mapsize):
-            for j in np.arange(0,self.mapsize):
-                self.add_widget(customButton(text="".format(i,j),id="{}_{}".format(i,j),on_press=self.pressed))
+        if not MapView.__built:
+            MapView.__built = True
+        super(MapView, self).__init__(**kwargs)
+        # Put the scheduler
+
+
 
 
     def pressed(self,mybutton):
