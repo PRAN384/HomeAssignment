@@ -17,6 +17,7 @@ class mqtt_broker:
         self.client = mqtt.Client(instance_name)
         print("connecting to broker")
         self.client.connect(self.broker_address)
+        print("Connected")
 
     def publish_command(self, command):
         self.client.publish(self.topic_write, command)
