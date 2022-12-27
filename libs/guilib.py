@@ -10,29 +10,21 @@ from kivy.clock import Clock
 from kivy.app import App
 import numpy as np
 import time
+import os
 from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProperty
 
 
 class MapView(GridLayout):
     rid=0
-    mapsize=5
-    mapArray = np.zeros([mapsize,mapsize])
     robotName=""
-    _added = False
+    init_map = False
     def __init__(self,srvr, **kwargs):
         super().__init__(**kwargs)
         self.attachServer(srvr)
         self.inputRobotName()
-        self.cols= self.mapsize
-        # for i in np.arange(0,self.mapsize):
-        #     for j in np.arange(0,self.mapsize):
-        #         self.add_widget(customButton(text="".format(i,j),id="{}_{}".format(i,j),on_press=self.pressed))
-        print(self.getMap())
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
-        Clock.schedule_interval(self.printMap,0.1)    
-
-
+        # Clock.schedule_interval(self.printMap,0.1)    
 
     def addPlt(self):
             self._added = True
@@ -45,7 +37,6 @@ class MapView(GridLayout):
             self.fig1 = plt.gcf()
             self.add_widget(FigureCanvasKivyAgg(self.fig1))
         
-
     def clearUpdate(self):
             cmap = colors.ListedColormap(['Blue','red','green'])
             curMap = self.getMap()
@@ -55,15 +46,11 @@ class MapView(GridLayout):
             self.fig1 = plt.gcf()
             self.add_widget(FigureCanvasKivyAgg(self.fig1))
 
-
-
     def Update(self,dt):
         # if self._added:
         plt.cla()
         self.clear_widgets()
-        # self.remove_widget(FigureCanvasKivyAgg(self.fig1))
         self.addPlt()
-
 
     def _keyboard_closed(self):
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)
@@ -80,15 +67,20 @@ class MapView(GridLayout):
         mapcur=self.mapArray
         return mapcur
 
+    def initMap(self,arrayNew):               
+        self.mapArray = arrayNew
+
     def setMap(self,mapAR):
+        if not self.init_map:
+            self.initMap(mapAR)
+            self.init_map=True
+
         old= np.array(self.getMap())
-
-        print("old {} \n\n New : {}".format(old,mapAR))
-
         isSame = (old==mapAR).all()
-        # print(isSame)
         if not isSame:
             self.mapArray =mapAR
+            # os.system( 'clear' )
+            print(mapAR)
 
     def printMap(self,dt):
         print("\n\n\n\n")
@@ -98,44 +90,46 @@ class MapView(GridLayout):
         if self.rid != 0:
 
             direction=str(pressedKey).upper()
-            if direction in ['W','A','S','D']:        
+            if direction in ['W','A','S','D','X']:        
                 navcmd = "$NAVREQ,{},{},{}".format(self.rid,direction,time.time_ns())
                 self.send_cmd(navcmd)
+
+                if direction=="X":
+
+                    self.setRID(0)
+                    ## Go into listning mode
             else:
                 print("invalid input")
         else:
             self.init_robot_instance()    
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
-
         self.input_navigation(keycode[1])
         return True
-
-    def pressed(self,mybutton):
-        print(mybutton.id)
 
     def attachServer(self,obj):
         self.server = obj
 
-    def updateGrid(self,dt):
-        pass
-
-
     def inputRobotName(self):
-        robotName = str(input("Enter robot Name( <10 Characters )\n")).upper()
-        self.setRobotName=robotName
+
+        while True:
+            robotName = str(input("Enter robot Name( <10 Characters )\n")).upper()
+            if len(robotName)<10:
+                self.setRobotName(robotName)
+                break
+            else:
+                print("Name too long \n")
 
     def setRobotName(self,name):
         self.robotName= name
         print("robotNameSet!")
+        return
 
     def getRobotName(self):
         return self.robotName
 
     def send_cmd(self,cmd):
         self.server.publish_command(cmd)
-        # print("Calling")
-        # self.mapArray = array
 
     def init_robot_instance(self):
         ## Send init command
@@ -150,13 +144,6 @@ class MapView(GridLayout):
                 self.send_cmd(cmd)
                 time.sleep(0.1)
                 exitloop=True
-
-class customButton(Button):
-    def __init__(self,id, **kwargs,):
-        super().__init__(**kwargs)
-        self.id = id
-        self.border = [21, 21, 21, 21]
-
 
 class TestApp(App):
     rid = 0

@@ -6,18 +6,16 @@ from  libs.helpers import *
 import json
 
 
-MAP = sitl_map(5)
+SITL = sitl_map()
 
 def on_message(client, userdata, message):
     req= str(message.payload.decode("utf-8"))
-    ## Message types and actions associated to each
-    ## Init bot
     header= req.split(',')[0]
     if header =="$INITROBOT":
-    # <1>: Robot ID
         rName = req.split(',')[1]
         initTime = req.split(',')[2]
-        success,id= MAP.AddRobot(robot(rName,initTime))
+        success,id= SITL.AddRobot(robot(rName,initTime))
+
         if success:
             print("Sending Init success")
             client_broker.publish_command("$INITROBOTS,{},{}".format(rName,id))
@@ -28,8 +26,9 @@ def on_message(client, userdata, message):
         dir     =    req.split(',')[2]
         cmdTime =    req.split(',')[3]
         command = [id,dir,cmdTime]
-        MAP.command_queue.append(command)
-        # print(MAP.command_queue)
+        SITL.command_queue.append(command)
+
+
 
 client_broker = mqtt_broker(b_address="localhost",\
                             instance_name="SITL Server",\
@@ -39,22 +38,15 @@ client_broker.client.on_message = on_message
 client_broker.client.subscribe(client_broker.topic_listen, qos=0)
 client_broker.client.loop_start()
 
-t= 0
-dt = 0.01
-
-def sendMap():
+def broadcastMap():
     while True:
-        listMap = MAP.getMap().tolist()
+        listMap = SITL.getMap().tolist()
         encMap = json.dumps(listMap)
         client_broker.publish_command("$NAVBROAD,:{}:{}".format(encMap,time.time_ns()))
         time.sleep(0.1)
 
-PosBroadCastThread= threading.Thread(target=sendMap,name="Position BroadCast",args=())
+PosBroadCastThread= threading.Thread(target=broadcastMap,name="Position BroadCast",args=())
 PosBroadCastThread.start()
 
-while t>-1:
-    # print(MAP.mapArray)    
-    # MAP.cleanArray()
-    
-    MAP.processQueue()
-    t+=dt
+while True:    
+    SITL.processQueue()
