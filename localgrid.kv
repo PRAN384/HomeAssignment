@@ -1,0 +1,15 @@
+# -*- coding: utf-8 -*-
+#:kivy 1.9.1
+<mapWid>:
+    size_hint: (1, 1)
+    pos_hint: 1,1
+    canvas:
+        Color:
+            rgba:(50/255,204/255,255/255,1)
+        Rectangle:
+            pos:dp(0),dp(0)
+            size:500,500
+        Rectangle:
+            source:'dd.png'
+            pos:dp(3),dp(2)#self.width/2 -dp(100), self.height/2  #dp(3),dp(2)#
+            size:500,500

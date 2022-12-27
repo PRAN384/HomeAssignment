@@ -23,6 +23,7 @@ def on_message(client, userdata, message):
             client_broker.publish_command("$INITROBOTS,{},{}".format(rName,id))
 
     if header =="$NAVREQ":
+        print("Got command")
         id      =    req.split(',')[1]
         dir     =    req.split(',')[2]
         cmdTime =    req.split(',')[3]

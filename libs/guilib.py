@@ -30,7 +30,7 @@ class MapView(GridLayout):
         print(self.getMap())
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
-        Clock.schedule_interval(self.Update,0.1)    
+        Clock.schedule_interval(self.printMap,0.1)    
 
 
 
@@ -86,7 +86,7 @@ class MapView(GridLayout):
         print("old {} \n\n New : {}".format(old,mapAR))
 
         isSame = (old==mapAR).all()
-        print(isSame)
+        # print(isSame)
         if not isSame:
             self.mapArray =mapAR
 
