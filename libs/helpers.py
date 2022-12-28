@@ -80,6 +80,7 @@ class sitl_map():
     id_list = []
     command_queue = []
     time_out_per = 5
+    
 
     def __init__(self):
         self.mapSize = self.input_map_size()
@@ -209,6 +210,7 @@ class sitl_map():
     def clear_hold(self, obj):
         os.system('clear')
         print(self.map_array)
+        print("SERVER ACTIVE")
         self.map_array[self.map_array == -obj.id] = 0
         obj.set_moving_flag(False)
         # Replace -ve nums with 0

@@ -17,6 +17,7 @@ class MapView(GridLayout):
     last_heard = 0
     time_out_per = 5
     unit_test_indx = 0
+    track_timeout = False
 
     def __init__(self, srvr, **kwargs):
         super().__init__(**kwargs)
@@ -68,6 +69,7 @@ class MapView(GridLayout):
         self.initMap = True
 
     def set_map(self, mapAR):
+        self.track_timeout = True
         if not self.initMap:
             self.init_map(mapAR)
         old = np.array(self.get_map())
@@ -76,6 +78,7 @@ class MapView(GridLayout):
             self.mapArray = mapAR
             os.system('clear')
             print(mapAR)
+            print("Robot Id:",self.get_rid())
 
     def input_robot_name(self):
 
@@ -143,10 +146,12 @@ class MapView(GridLayout):
             pass
 
     def check_server(self, dt):
-        diff = time.time()-self.get_last_heard()
-        if diff > self.time_out_per:
-            print("Server is not active \n Closing Robot Session")
-            exit()
+        if(self.track_timeout):
+                
+            diff = time.time()-self.get_last_heard()
+            if diff > self.time_out_per:
+                print("Server is not active \n Closing Robot Session")
+                exit()
 
     def unit_test(self, dt):
         cmds = ["W", "D", "S", "A"]
