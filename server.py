@@ -9,7 +9,7 @@ SITL = sitl_map()
 def on_message(client, userdata, message):
     req = str(message.payload.decode("utf-8"))
     header = req.split(',')[0]
-    if header == "$INITROBOT":
+    if header == "$INITROBOT": ## initial
         rName = req.split(',')[1]
         initTime = req.split(',')[2]
         success, id = SITL.add_robot(robot(rName, initTime))
@@ -30,12 +30,8 @@ def on_message(client, userdata, message):
     if header == "$PINGSERVER":
         id = int(req.split(',')[1])
         print("Got ROBOT PING:{}".format(id))
-
         SITL.update_robot_ping(id)
-    #     dir     =    req.split(',')[2]
-    #     cmdTime =    req.split(',')[3]
-    #     command = [id,dir,cmdTime]
-    #     SITL.command_queue.append(command)
+
 
 
 client_broker = mqtt_broker(b_address="localhost",
@@ -57,8 +53,9 @@ def broadcast_map():
 
 
 PosBroadCastThread = threading.Thread(
-    target=broadcast_map, name="Position BroadCast", args=())
+    target=broadcast_map, name="Position Broadcast", args=())
 PosBroadCastThread.start()
 
 while True:
+    
     SITL.process_queue()

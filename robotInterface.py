@@ -9,11 +9,10 @@ from  libs.guilib import *
 import json
 import threading
 
-# mm.setRobotName(robotName)
 server_broker =mqtt_broker(b_address="localhost",instance_name="Robot client{}".format(time.time_ns()),topic_listen="robot/pos",topic_write="sitl/cmd")
 mm  = MapView(server_broker)
 mm.attach_server(server_broker)
-frontEnd = TestApp(mm)
+frontEnd = turtleApp(mm)
 
 def on_message(client, userdata, message):
     rep= str(message.payload.decode("utf-8"))

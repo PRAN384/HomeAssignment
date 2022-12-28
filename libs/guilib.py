@@ -1,6 +1,5 @@
 from kivy.uix.gridlayout import GridLayout
 from kivy.garden.matplotlib import FigureCanvasKivyAgg
-# from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.core.window import Window
 import matplotlib.pyplot as plt
 from matplotlib import colors
@@ -9,14 +8,12 @@ from kivy.app import App
 import numpy as np
 import time
 import os
-from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProperty
-
 
 class MapView(GridLayout):
     rid = 0
     robotName = ""
     initMap = False
-    lastHeard = 0
+    last_heard = 0
     time_out_per = 5
     unit_test_indx = 0
 
@@ -55,10 +52,10 @@ class MapView(GridLayout):
         self.unit_test_indx = num
 
     def set_last_heard(self, num):
-        self.lastHeard = num
+        self.last_heard = num
 
     def get_last_heard(self):
-        return self.lastHeard
+        return self.last_heard
 
     def check_server(self, dt):
         diff = time.time()-self.get_last_heard()
@@ -120,8 +117,8 @@ class MapView(GridLayout):
         self.rid = rid
 
     def get_rid(self):
-        locRID = self.rid
-        return locRID
+        loc_rid = self.rid
+        return loc_rid
 
     def get_map(self):
         mapcur = self.mapArray
@@ -204,15 +201,13 @@ class MapView(GridLayout):
             exitloop = True
 
 
-class TestApp(App):
+class turtleApp(App):
     rid = 0
 
     def __init__(self, mm, **kwargs):
-        super(TestApp, self).__init__()
+        super(turtleApp, self).__init__()
         self.myMap = mm
-        # self.myMap =MapView()
 
     def build(self):
-        # self.myMap =MapView()
-        # Clock.schedule_interval(self.myMap.updateGrid,0.1)
+
         return self.myMap

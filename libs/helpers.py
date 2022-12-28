@@ -1,9 +1,8 @@
-import time
 import paho.mqtt.client as mqtt
-import numpy as np
 from random import randrange
+import numpy as np
 import threading
-from kivy.clock import Clock
+import time
 
 
 class mqtt_broker:
@@ -72,7 +71,6 @@ class robot():
         flag = self.is_moving
         return (flag)
 
-
 class sitl_map():
     robot_list = {}
     robot_ping = {}
@@ -121,10 +119,10 @@ class sitl_map():
         if newid != 0:
             self.id_list.append(newid)
             obj.id = newid
-            spawnPos = self.get_spawn_tile()
-            print("Spawning Robot {} at {}".format(obj.name, spawnPos))
-            obj.cur_loc = spawnPos
-            obj.tar_loc = spawnPos
+            spawnpos = self.get_spawn_tile()
+            print("Spawning Robot {} at {}".format(obj.name, spawnpos))
+            obj.cur_loc = spawnpos
+            obj.tar_loc = spawnpos
             tar_x, tar_y = obj.tar_loc
             cur_x, cur_y = obj.cur_loc
             self.map_array[tar_x, tar_y] = obj.id
