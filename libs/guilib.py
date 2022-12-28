@@ -2,8 +2,6 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.garden.matplotlib import FigureCanvasKivyAgg
 # from kivy.garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 from kivy.core.window import Window
-from kivy.uix.button import Button
-from kivy.uix.widget import Widget
 import matplotlib.pyplot as plt
 from matplotlib import colors
 from kivy.clock import Clock
@@ -15,68 +13,100 @@ from kivy.properties import NumericProperty, ReferenceListProperty, ObjectProper
 
 
 class MapView(GridLayout):
-    rid=0
-    robotName=""
+    rid = 0
+    robotName = ""
     initMap = False
-    lastHeard=0
-    timeoutPeriod = 5
-    def __init__(self,srvr, **kwargs):
+    lastHeard = 0
+    time_out_per = 5
+    unit_test_indx = 0
+
+    def __init__(self, srvr, **kwargs):
         super().__init__(**kwargs)
-        self.attachServer(srvr)
-        self.inputRobotName()
+        self.attach_server(srvr)
+        self.input_robot_name()
+        unit_Test_Flag = self.perf_unit_test()
         self._keyboard = Window.request_keyboard(self._keyboard_closed, self)
         self._keyboard.bind(on_key_down=self._on_keyboard_down)
-        Clock.schedule_interval(self.checkServerActive,5)    
+        self.initMap = False
 
+        if unit_Test_Flag:
+            Clock.schedule_interval(self.unit_test, 0.5)
+        Clock.schedule_interval(self.check_server, 5)
+        Clock.schedule_interval(self.ping_server, 1)
 
-    def pingServer(self):
-        ## Ping server when we get a message from the server,
-        # If the server doesnt get a reply from the Bot for 5 seconds
-        # it deletes the bot and assume it is dead 
+    def perf_unit_test(self):
+        flag = input("Perform Unit test?: y/n \n")
 
+        if flag.upper() == "Y":
+            return True
+        else:
+            return False
 
-    def setLastHeard(self,num):
+    def ping_server(self, dt):
+        if self.get_rid() != 0:
+            ping_cmd = "$PINGSERVER,{}".format(self.get_rid())
+            self.send_cmd(ping_cmd)
+            pass
+
+    def get_unit_test_indx(self):
+        return self.unit_test_indx
+
+    def set_unit_test_indx(self, num):
+        self.unit_test_indx = num
+
+    def set_last_heard(self, num):
         self.lastHeard = num
 
-    def getLastHeard(self):
+    def get_last_heard(self):
         return self.lastHeard
 
-    def checkServerActive(self,dt):
-        diff=time.time()-self.getLastHeard() 
+    def check_server(self, dt):
+        diff = time.time()-self.get_last_heard()
         print(diff)
-        if diff> self.timeoutPeriod:
-            print("Server is not active")
-            self.setRID(0)#Set the session ID to 0
+        if diff > self.time_out_per:
+            print("Server is not active \n Closing Robot Session")
+            exit()
+            # self.initMap=False
+            # self.set_rid(0)
 
-    def simStatus(self):
-        #Want to print 
-            #-number of bot in the sim,
-            #-ID 
-            #-Name
-            #-Location
+    def sim_status(self):
+        # Want to print
+        # -number of bot in the sim,
+        # -ID
+        # -Name
+        # -Location
         pass
 
-    def addPlt(self):
-            self._added = True
-            cmap = colors.ListedColormap(['Blue','red','green'])
-            curMap = self.getMap()
-            curMap[curMap<0]=0
-            plt.figure(figsize=(6,6))
-            plt.pcolor(curMap[::-1],cmap=cmap,edgecolors='k', linewidths=3)
-            plt.grid(True)
-            self.fig1 = plt.gcf()
-            self.add_widget(FigureCanvasKivyAgg(self.fig1))
-        
-    def clearUpdate(self):
-            cmap = colors.ListedColormap(['Blue','red','green'])
-            curMap = self.getMap()
-            curMap[curMap<0]=0
-            plt.pcolor(curMap[::-1],cmap=cmap,edgecolors='k', linewidths=3)
-            plt.grid(True)
-            self.fig1 = plt.gcf()
-            self.add_widget(FigureCanvasKivyAgg(self.fig1))
+    def unit_test(self, dt):
+        cmds = ["W", "D", "S", "A"]
+        i = self.get_unit_test_indx()
+        self.input_navigation(cmds[i])
+        i = i+1
+        if i > 3:
+            i = 0
+        self.set_unit_test_indx(i)
 
-    def Update(self,dt):
+    def add_plot(self):
+        self._added = True
+        cmap = colors.ListedColormap(['Blue', 'red', 'green'])
+        curMap = self.get_map()
+        curMap[curMap < 0] = 0
+        plt.figure(figsize=(6, 6))
+        plt.pcolor(curMap[::-1], cmap=cmap, edgecolors='k', linewidths=3)
+        plt.grid(True)
+        self.fig1 = plt.gcf()
+        self.add_widget(FigureCanvasKivyAgg(self.fig1))
+
+    def clear_update(self):
+        cmap = colors.ListedColormap(['Blue', 'red', 'green'])
+        curMap = self.get_map()
+        curMap[curMap < 0] = 0
+        plt.pcolor(curMap[::-1], cmap=cmap, edgecolors='k', linewidths=3)
+        plt.grid(True)
+        self.fig1 = plt.gcf()
+        self.add_widget(FigureCanvasKivyAgg(self.fig1))
+
+    def Update(self, dt):
         # if self._added:
         plt.cla()
         self.clear_widgets()
@@ -86,109 +116,103 @@ class MapView(GridLayout):
         self._keyboard.unbind(on_key_down=self._on_keyboard_down)
         self._keyboard = None
 
-    def setRID(self,rid):
-        self.rid= rid    
+    def set_rid(self, rid):
+        self.rid = rid
 
-    def getRID(self):
+    def get_rid(self):
         locRID = self.rid
-        return locRID   
+        return locRID
 
-    def getMap(self):
-        mapcur=self.mapArray
+    def get_map(self):
+        mapcur = self.mapArray
         return mapcur
 
-    def initMap(self,arrayNew):               
+    def init_map(self, arrayNew):
         self.mapArray = arrayNew
+        self.initMap = True
 
-    def setMap(self,mapAR):
+    def set_map(self, mapAR):
         if not self.initMap:
-            self.initMap(mapAR)
-            self.initMap=True
-
-        old= np.array(self.getMap())
-        isSame = (old==mapAR).all()
+            self.init_map(mapAR)
+        old = np.array(self.get_map())
+        isSame = (old == mapAR).all()
         if not isSame:
-            self.mapArray =mapAR
-            # os.system( 'clear' )
+            self.mapArray = mapAR
+            os.system('clear')
             print(mapAR)
 
-    def printMap(self,dt):
+    def print_map(self, dt):
         print("\n\n\n\n")
         print(self.mapArray)
 
-    def input_navigation(self,pressedKey):
+    def input_navigation(self, pressedKey):
         if self.rid != 0:
 
-            direction=str(pressedKey).upper()
-            if direction in ['W','A','S','D','X']:        
-                navcmd = "$NAVREQ,{},{},{}".format(self.rid,direction,time.time_ns())
-                self.send_cmd(navcmd)
+            direction = str(pressedKey).upper()
+            if direction in ['W', 'A', 'S', 'D', 'X']:
+                nav_cmd = "$NAVREQ,{},{},{}".format(
+                    self.rid, direction, time.time_ns())
+                self.send_cmd(nav_cmd)
 
-                if direction=="X":
+                if direction == "X":
 
-                    self.setRID(0)
-                    ## Go into listning mode
+                    self.set_rid(0)
+                    # Go into listning mode
             else:
                 print("invalid input")
         else:
-            self.init_robot_instance()    
+            self.init_robot_instance()
 
     def _on_keyboard_down(self, keyboard, keycode, text, modifiers):
         self.input_navigation(keycode[1])
         return True
 
-    def attachServer(self,obj):
+    def attach_server(self, obj):
         self.server = obj
 
-    def inputRobotName(self):
+    def input_robot_name(self):
 
         while True:
-            robotName = str(input("Enter robot Name( <10 Characters )\n")).upper()
-            if len(robotName)<10:
-                self.setRobotName(robotName)
+            robotName = str(
+                input("Enter robot Name( <10 Characters )\n")).upper()
+            if len(robotName) < 10:
+                self.set_robot_name(robotName)
                 break
             else:
                 print("Name too long \n")
 
-    def setRobotName(self,name):
-        self.robotName= name
+    def set_robot_name(self, name):
+        self.robotName = name
         print("robotNameSet!")
         return
 
-    def getRobotName(self):
+    def get_robot_name(self):
         return self.robotName
 
-    def send_cmd(self,cmd):
+    def send_cmd(self, cmd):
         self.server.publish_command(cmd)
 
     def init_robot_instance(self):
-        ## Send init command
-        maxNameLen = 10
+        # Send init command
         exitloop = False
-        while not exitloop :
-            rName = self.getRobotName()
-            print(rName)
-            if len(rName)<10:
-                print("Initialising Robot")
-                cmd = "$INITROBOT,{},{}\r\n".format(rName,time.time_ns())
-                self.send_cmd(cmd)
-                time.sleep(0.1)
-                exitloop=True
+        while not exitloop:
+            rName = self.get_robot_name()
+            print("Initialising Robot")
+            cmd = "$INITROBOT,{},{}\r\n".format(rName, time.time_ns())
+            self.send_cmd(cmd)
+            time.sleep(0.1)
+            exitloop = True
+
 
 class TestApp(App):
     rid = 0
-    def __init__(self, mm,**kwargs):
-            super(TestApp, self).__init__()
-            self.myMap = mm
-            # self.myMap =MapView() 
 
-
-
+    def __init__(self, mm, **kwargs):
+        super(TestApp, self).__init__()
+        self.myMap = mm
+        # self.myMap =MapView()
 
     def build(self):
-        # self.myMap =MapView() 
+        # self.myMap =MapView()
         # Clock.schedule_interval(self.myMap.updateGrid,0.1)
         return self.myMap
-
-
-

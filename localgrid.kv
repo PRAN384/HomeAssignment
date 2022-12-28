@@ -13,3 +13,23 @@
             source:'dd.png'
             pos:dp(3),dp(2)#self.width/2 -dp(100), self.height/2  #dp(3),dp(2)#
             size:500,500
+
+    Widget:
+        id: traj # Image:
+        pos:0,0#self.width/2 -dp(100), self.height/2 
+        size_hint: None, None
+        size: dp(200), dp(200)
+        canvas.before:
+            PushMatrix
+            Rotate:
+                angle: 0 # heading of the ROV
+                origin: dp(3)+int(root.exP),dp(2)+int(root.yP)
+        canvas:
+            Color:
+                rgb: (.5,.8,0.1)
+            Line:
+                width: 1
+                points: root.trajectory
+                    
+        canvas.after:
+            PopMatrix

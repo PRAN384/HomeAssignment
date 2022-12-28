@@ -3,199 +3,224 @@ import paho.mqtt.client as mqtt
 import numpy as np
 from random import randrange
 import threading
+from kivy.clock import Clock
+
+
 class mqtt_broker:
-    last_published=0
-    def __init__(self,b_address,instance_name,topic_listen,topic_write):
+    last_published = 0
+
+    def __init__(self, b_address, instance_name, topic_listen, topic_write):
         self.topic_listen = topic_listen
         self.topic_write = topic_write
-        self.broker_address=b_address
+        self.broker_address = b_address
         print("creating new instance")
-        self.client = mqtt.Client(instance_name) 
+        self.client = mqtt.Client(instance_name)
         print("connecting to broker")
         self.client.connect(self.broker_address)
 
-
-    def publish_command(self,command):
-        self.client.publish(self.topic_write,command)
-        self.last_published=time.time()
+    def publish_command(self, command):
+        self.client.publish(self.topic_write, command)
+        self.last_published = time.time()
 
 
 class robot():
-    id =0
-    curLoc=[0,0]
-    tarLoc=[0,0]
-    isMoving=False
-    def __init__(self,name,timeStamp):
+    id = 0
+    cur_loc = [0, 0]
+    tar_loc = [0, 0]
+    is_moving = False
+
+    def __init__(self, name, timeStamp):
         self.name = name
         self.joined = timeStamp
 
-    def getCurLoc(self):
-        loc =self.curLoc 
+    def get_cur_loc(self):
+        loc = self.cur_loc
         return loc
 
-    def setCurLoc(self,newLoc):
-        self.curLoc=newLoc 
+    def set_cur_loc(self, newLoc):
+        self.cur_loc = newLoc
 
-    def getTarLoc(self):
-        loc =self.tarLoc 
+    def get_tar_loc(self):
+        loc = self.tar_loc
         return loc
-        
-    def setTarLoc(self,newLoc):
-        self.tarLoc= newLoc
 
-    def calcTarget(self,navCmd):
-        curpos = self.getCurLoc()
-        tarpos=[0,0]
-        # print("A :Cur:{} \n Tar:{}\n".format(self.getCurLoc(),self.getTarLoc()))
+    def set_tar_loc(self, newLoc):
+        self.tar_loc = newLoc
 
-        if navCmd =="W":
-            tarpos[0] = curpos[0]-1
-            tarpos[1] = curpos[1]
-        if navCmd =="S":
-            tarpos[0] = curpos[0]+1
-            tarpos[1] = curpos[1]
-        if navCmd =="A":
-            tarpos[1] = curpos[1]-1
-            tarpos[0] = curpos[0]
-        if navCmd =="D":
-            tarpos[1] = curpos[1]+1
-            tarpos[0] = curpos[0]
+    def calc_tar(self, nav_cmd):
+        cur_pos = self.get_cur_loc()
+        tar_pos = [0, 0]
+        if nav_cmd == "W":
+            tar_pos[0] = cur_pos[0]-1
+            tar_pos[1] = cur_pos[1]
+        if nav_cmd == "S":
+            tar_pos[0] = cur_pos[0]+1
+            tar_pos[1] = cur_pos[1]
+        if nav_cmd == "A":
+            tar_pos[1] = cur_pos[1]-1
+            tar_pos[0] = cur_pos[0]
+        if nav_cmd == "D":
+            tar_pos[1] = cur_pos[1]+1
+            tar_pos[0] = cur_pos[0]
 
-        self.setTarLoc(tarpos)
+        self.set_tar_loc(tar_pos)
 
-    def setMoving(self,flag):
-        self.isMoving = flag
+    def set_moving_flag(self, flag):
+        self.is_moving = flag
 
-    def getMoving(self):
-        movingFlag= self.isMoving
-        return(movingFlag)
-    
+    def get_moving_flag(self):
+        flag = self.is_moving
+        return (flag)
+
+
 class sitl_map():
-    robotList = {}
-    idList = []
-    command_queue =[]
+    robot_list = {}
+    robot_ping = {}
+    id_list = []
+    command_queue = []
+    time_out_per = 5
 
     def __init__(self):
-        self.mapSize = self.inputMapSize()
-        self.mapArray = np.zeros([self.mapSize,self.mapSize])
+        self.mapSize = self.input_map_size()
+        self.map_array = np.zeros([self.mapSize, self.mapSize])
+        check_robtos = threading.Thread(
+            target=self.check_server, name="check active robots", args=())
+        check_robtos.start()
 
-    def inputMapSize(self):
-        exit =False
+    def update_robot_ping(self, id):
+        self.robot_ping[id] = time.time()
+
+    def check_server(self):
+        while True:
+            print("Check for inactive bots")
+            for k in self.robot_ping.keys():
+                if (time.time()-self.robot_ping[k]) > self.time_out_per:
+                    bot = self.robot_list[k]
+                    print("Deleting Robot")
+                    self.delete_robot(bot)
+                    break
+                else:
+                    pass
+            time.sleep(5)
+
+    def input_map_size(self):
+        exit = False
         while not exit:
             try:
-                mapSize= int(input("Enter Map size <25\n"))
-                if(mapSize>0 and mapSize<25):
-                    exit=True
+                mapSize = int(input("Enter Map size <25\n"))
+                if (mapSize > 0 and mapSize < 25):
+                    exit = True
                     return mapSize
                 else:
                     print("Invalid size")
             except ValueError:
                 print("That was not a valid size.  Try again...")
 
+    def add_robot(self, obj):
+        newid = self.pick_id()
+        if newid != 0:
+            self.id_list.append(newid)
+            obj.id = newid
+            spawnPos = self.get_spawn_tile()
+            print("Spawning Robot {} at {}".format(obj.name, spawnPos))
+            obj.cur_loc = spawnPos
+            obj.tar_loc = spawnPos
+            tar_x, tar_y = obj.tar_loc
+            cur_x, cur_y = obj.cur_loc
+            self.map_array[tar_x, tar_y] = obj.id
+            self.map_array[cur_x, cur_y] = obj.id
+            # Associating the robot with its id for easy access
+            self.robot_list[obj.id] = obj
+            return True, obj.id
+        else:
+            # Can tell bot that the grid is full
+            pass
 
-    def AddRobot(self,obj):
-        newid = self.pickID()
-        self.idList.append(newid)
-        obj.id = newid
-        spawnPos = self.getSpawnTilePos()
-        print("Spawning Robot {} at {}".format(obj.name, spawnPos))
-        obj.curLoc = spawnPos
-        obj.tarLoc = spawnPos
-        tar_x,tar_y=obj.tarLoc
-        cur_x,cur_y=obj.curLoc
-        self.mapArray[tar_x,tar_y]=obj.id
-        self.mapArray[cur_x,cur_y]=obj.id
-        self.robotList[obj.id]=obj  ## Associating the robot with its id for easy access
-        return True,obj.id
-
-    def pickID(self):
-        print(self.idList)
-        if self.idList:
-            mBot  = max(self.idList)
+    def pick_id(self):
+        # print(self.id_list)
+        if self.id_list:
+            mBot = max(self.id_list)
             return mBot+1
         else:
             return 1
 
-    def DeleteRobot(self,obj):
+    def delete_robot(self, obj):
         print("Deleting Robot {}".format(obj.id))
-        tar_x,tar_y=obj.tarLoc
-        cur_x,cur_y=obj.curLoc
-        self.mapArray[tar_x,tar_y]=0
-        self.mapArray[cur_x,cur_y]=0
-        self.idList.remove(obj.id)
-        del self.robotList[obj.id]
+        tar_x, tar_y = obj.tar_loc
+        cur_x, cur_y = obj.cur_loc
+        self.map_array[tar_x, tar_y] = 0
+        self.map_array[cur_x, cur_y] = 0
+        self.id_list.remove(obj.id)
+        del self.robot_list[obj.id]
+        del self.robot_ping[obj.id]
+        # print(self.id_list, self.robot_list)
+        # self.robot_list.pop(obj) Need to be tested
 
-        print(self.idList,self.robotList)
-
-        # self.robotList.pop(obj) Need to be tested
-
-    def processQueue(self):
-        while len(self.command_queue)!=0:
+    def process_queue(self):
+        while len(self.command_queue) != 0:
             print(self.command_queue)
-            firstCmd= self.command_queue[0]
-            locId = int(firstCmd[0])
-            print("----\n",locId,self.idList)
-            if locId in self.idList:
+            firstCmd = self.command_queue[0]
+            id = int(firstCmd[0])
+            if id in self.id_list:
                 print("Attempting Move")
-                navCmd = str(firstCmd[1])
-                bot =self.robotList[locId]
-                if navCmd=='X':
-                    self.DeleteRobot(bot)
-                    self.command_queue.pop(0) ## Danger
+                nav_cmd = str(firstCmd[1])
+                bot = self.robot_list[id]
+                if nav_cmd == 'X':
+                    self.delete_robot(bot)
+                    self.command_queue.pop(0)
                 else:
-                        
-                    bot.calcTarget(navCmd)
-                    ## MoveRobot
-                    self.MoveRobot(bot)
-                    self.command_queue.pop(0) ## Danger
+                    bot.calc_tar(nav_cmd)
+                    # move_robot
+                    self.move_robot(bot)
+                    self.command_queue.pop(0)
 
-
-
-    def getMap(self):
-        tmpMap = self.mapArray
+    def get_map(self):
+        tmpMap = self.map_array
         return tmpMap
 
-    def setMap(self):
-        # tmpMap = 
-        pass
+    def move_robot(self, obj):
+        tar_x, tar_y = obj.get_tar_loc()
+        cur_x, cur_y = obj.get_cur_loc()
 
-        
-    def MoveRobot(self,obj):
+        within_bounds = tar_x < self.mapSize and tar_x > - \
+            1 and tar_y < self.mapSize and tar_y > -1
+        # Sanity Check, are we on the boundary?
+        if within_bounds and not obj.get_moving_flag():
+            tile_is_empty = self.map_array[tar_x, tar_y] == 0
+            if tile_is_empty:
+                obj.set_moving_flag(True)
+                self.map_array[tar_x, tar_y] = obj.id
+                self.map_array[cur_x, cur_y] = -obj.id
+                obj.set_cur_loc([tar_x, tar_y])
 
-        tar_x,tar_y=obj.getTarLoc()
-        cur_x,cur_y=obj.getCurLoc()
+                # print(self.map_array)
 
-        withinBoundary = tar_x<self.mapSize and  tar_x>-1 and tar_y<self.mapSize and  tar_y>-1
-        ## Sanity Check, are we on the boundary?
-        if withinBoundary and not obj.getMoving():
-            tileIsEmpty    = self.mapArray[tar_x,tar_y]==0
-            if tileIsEmpty:
-                obj.setMoving(True)
-                self.mapArray[tar_x,tar_y]=obj.id
-                self.mapArray[cur_x,cur_y]=-obj.id
-                obj.setCurLoc([tar_x,tar_y])
-                
-                print(self.mapArray)
-                
-                self.Thread = threading.Timer(0.2,function=self.clearHold,args =(obj,))
+                self.Thread = threading.Timer(
+                    0.2, function=self.clear_hold, args=(obj,))
                 self.Thread.start()
 
             else:
-                print("Cant! Tile isnt empty")
-            
+                pass
+                # print("Cant! Tile isnt empty")
+
         else:
-            print("On the edge")
+            pass
+            # print("On the edge")
 
-    def getSpawnTilePos(self):
-        emptyTiles = np.argwhere(self.mapArray==0)
-        i = randrange(len(emptyTiles))
-        return list((emptyTiles[i]))
+    def get_spawn_tile(self):
+        empty_tiles = np.argwhere(self.map_array == 0)
+        if len(empty_tiles) != 0:
 
-    def cleanArray(self):
-        self.mapArray[self.mapArray < 0] =0
+            i = randrange(len(empty_tiles))
+            return list((empty_tiles[i]))
+        else:
+            return 0  # Cant add
 
-    def clearHold(self,obj):
-        self.mapArray[self.mapArray ==-obj.id]=0    
-        obj.setMoving(False)
-        print(self.mapArray)
+    def clear_array(self):
+        self.map_array[self.map_array < 0] = 0
+
+    def clear_hold(self, obj):
+        self.map_array[self.map_array == -obj.id] = 0
+        obj.set_moving_flag(False)
+        print(self.map_array)
         # Replace -ve nums with 0
