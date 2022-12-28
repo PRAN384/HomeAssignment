@@ -8,7 +8,6 @@ sudo apt-get install mosquitto
 sudo apt-get install mosquitto-clients
 sudo apt clean
 pip3 install paho-mqtt
-
 ## Need Testing 
 
 

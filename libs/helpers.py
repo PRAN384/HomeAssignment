@@ -3,6 +3,7 @@ from random import randrange
 import numpy as np
 import threading
 import time
+import os
 
 
 class mqtt_broker:
@@ -46,6 +47,13 @@ class robot():
     def set_tar_loc(self, newLoc):
         self.tar_loc = newLoc
 
+    def set_moving_flag(self, flag):
+        self.is_moving = flag
+
+    def get_moving_flag(self):
+        flag = self.is_moving
+        return (flag)
+
     def calc_tar(self, nav_cmd):
         cur_pos = self.get_cur_loc()
         tar_pos = [0, 0]
@@ -64,12 +72,6 @@ class robot():
 
         self.set_tar_loc(tar_pos)
 
-    def set_moving_flag(self, flag):
-        self.is_moving = flag
-
-    def get_moving_flag(self):
-        flag = self.is_moving
-        return (flag)
 
 class sitl_map():
     robot_list = {}
@@ -82,24 +84,8 @@ class sitl_map():
         self.mapSize = self.input_map_size()
         self.map_array = np.zeros([self.mapSize, self.mapSize])
         check_robtos = threading.Thread(
-            target=self.check_server, name="check active robots", args=())
+            target=self.check_server, name="check_active_robots", args=())
         check_robtos.start()
-
-    def update_robot_ping(self, id):
-        self.robot_ping[id] = time.time()
-
-    def check_server(self):
-        while True:
-            print("Check for inactive bots")
-            for k in self.robot_ping.keys():
-                if (time.time()-self.robot_ping[k]) > self.time_out_per:
-                    bot = self.robot_list[k]
-                    print("Deleting Robot")
-                    self.delete_robot(bot)
-                    break
-                else:
-                    pass
-            time.sleep(5)
 
     def input_map_size(self):
         exit = False
@@ -120,22 +106,32 @@ class sitl_map():
             self.id_list.append(newid)
             obj.id = newid
             spawnpos = self.get_spawn_tile()
-            print("Spawning Robot {} at {}".format(obj.name, spawnpos))
-            obj.cur_loc = spawnpos
-            obj.tar_loc = spawnpos
-            tar_x, tar_y = obj.tar_loc
-            cur_x, cur_y = obj.cur_loc
-            self.map_array[tar_x, tar_y] = obj.id
-            self.map_array[cur_x, cur_y] = obj.id
-            # Associating the robot with its id for easy access
-            self.robot_list[obj.id] = obj
-            return True, obj.id
+            if type(spawnpos) != int:
+                print("Spawning Robot {} at {}".format(obj.name, spawnpos))
+                obj.cur_loc = spawnpos
+                obj.tar_loc = spawnpos
+                tar_x, tar_y = obj.tar_loc
+                cur_x, cur_y = obj.cur_loc
+                self.map_array[tar_x, tar_y] = obj.id
+                self.map_array[cur_x, cur_y] = obj.id
+                # Associating the robot with its id for easy access
+                self.robot_list[obj.id] = obj
+                return True, obj.id
+            else:
+                return False, 0
         else:
-            # Can tell bot that the grid is full
             pass
 
+    def get_spawn_tile(self):
+        empty_tiles = np.argwhere(self.map_array == 0)
+        if len(empty_tiles) != 0:
+
+            i = randrange(len(empty_tiles))
+            return list((empty_tiles[i]))
+        else:
+            return 0  # Cant add
+
     def pick_id(self):
-        # print(self.id_list)
         if self.id_list:
             mBot = max(self.id_list)
             return mBot+1
@@ -156,11 +152,10 @@ class sitl_map():
 
     def process_queue(self):
         while len(self.command_queue) != 0:
-            print(self.command_queue)
+            # print(self.command_queue)
             firstCmd = self.command_queue[0]
             id = int(firstCmd[0])
             if id in self.id_list:
-                print("Attempting Move")
                 nav_cmd = str(firstCmd[1])
                 bot = self.robot_list[id]
                 if nav_cmd == 'X':
@@ -168,9 +163,16 @@ class sitl_map():
                     self.command_queue.pop(0)
                 else:
                     bot.calc_tar(nav_cmd)
-                    # move_robot
                     self.move_robot(bot)
                     self.command_queue.pop(0)
+
+    def get_robot_list(self):
+        updateDict = {}
+        robot_dict = self.robot_list
+        for i in robot_dict.keys():
+            r = robot_dict[i]
+            updateDict[i] = [r.name, r.get_cur_loc()]
+        return updateDict
 
     def get_map(self):
         tmpMap = self.map_array
@@ -199,26 +201,28 @@ class sitl_map():
 
             else:
                 pass
-                # print("Cant! Tile isnt empty")
 
         else:
             pass
-            # print("On the edge")
-
-    def get_spawn_tile(self):
-        empty_tiles = np.argwhere(self.map_array == 0)
-        if len(empty_tiles) != 0:
-
-            i = randrange(len(empty_tiles))
-            return list((empty_tiles[i]))
-        else:
-            return 0  # Cant add
-
-    def clear_array(self):
-        self.map_array[self.map_array < 0] = 0
 
     def clear_hold(self, obj):
+        os.system('clear')
+        print(self.map_array)
         self.map_array[self.map_array == -obj.id] = 0
         obj.set_moving_flag(False)
-        print(self.map_array)
         # Replace -ve nums with 0
+
+    def update_robot_ping(self, id):
+        self.robot_ping[id] = time.time()
+
+    def check_server(self):
+        while True:
+            for k in self.robot_ping.keys():
+                if (time.time()-self.robot_ping[k]) > self.time_out_per:
+                    bot = self.robot_list[k]
+                    print("Deleting Robot")
+                    self.delete_robot(bot)
+                    break
+                else:
+                    pass
+            time.sleep(5)
